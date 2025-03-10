@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const postcss = require("postcss");
-const pxToUnit = require("../index");
+const pxToUnit = require("../index").default;
 
 function runCase(input, output, options) {
   let inputFile = fs.readFileSync(input);
