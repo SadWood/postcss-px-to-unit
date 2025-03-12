@@ -10,9 +10,9 @@
     "test": "jest ./test --coverage",
     "prepublishOnly": "npm test",
     "publish": "npm publish",
-    "release:patch": "npm version patch && npm publish",
-    "release:minor": "npm version minor && npm publish",
-    "release:major": "npm version major && npm publish"
+    "release:patch": "npm version patch",
+    "release:minor": "npm version minor",
+    "release:major": "npm version major"
   },
   "files": [
     "index.js",
