@@ -1,13 +1,12 @@
-const fs = require("fs");
-const path = require("path");
-
-const postcss = require("postcss");
-const pxToUnit = require("../index");
+import fs from "fs";
+import path from "path";
+import postcss from "postcss";
+import PxToUnit from "../index";
 
 let inputFile = path.resolve(__dirname, "./input/test.css");
 
 postcss([
-  pxToUnit({
+  PxToUnit({
     targetUnit: "vw&rem",
   }),
 ])

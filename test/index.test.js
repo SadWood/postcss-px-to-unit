@@ -1,20 +1,16 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+import postcss from "postcss";
+import PxToUnit from "../index";
 
-const postcss = require("postcss");
-const pxToUnit = require("../index").default;
-
-function runCase(input, output, options) {
+async function runCase(input, output, options) {
   let inputFile = fs.readFileSync(input);
   let outputFile = fs.readFileSync(output, "utf8");
-  return postcss([pxToUnit(options)])
-    .process(inputFile, {
-      from: input,
-    })
-    .then(function (result) {
-      expect(result.css).toEqual(outputFile);
-      expect(result.warnings()).toHaveLength(0);
-    });
+  const result = await postcss([PxToUnit(options)]).process(inputFile, {
+    from: input,
+  });
+  expect(result.css).toEqual(outputFile);
+  expect(result.warnings()).toHaveLength(0);
 }
 
 describe("Convert", () => {
@@ -53,6 +49,56 @@ describe("Convert", () => {
     let inputFile = path.resolve(__dirname, "./input/ignore-pattern.css");
     let outputFile = path.resolve(__dirname, "./input/ignore-pattern.css");
     return runCase(inputFile, outputFile);
+  });
+
+  test("custom precision", () => {
+    let inputFile = path.resolve(__dirname, "./input/test.css");
+    let outputFile = path.resolve(__dirname, "./output/precision.css");
+    return runCase(inputFile, outputFile, {
+      targetUnit: "rem",
+      unitPrecision: 2,
+    });
+  });
+
+  test("custom viewportWidth", () => {
+    let inputFile = path.resolve(__dirname, "./input/test.css");
+    let outputFile = path.resolve(__dirname, "./output/viewport-width.css");
+    return runCase(inputFile, outputFile, {
+      targetUnit: "vw",
+      viewportWidth: 750,
+    });
+  });
+
+  test("custom htmlFontSize", () => {
+    let inputFile = path.resolve(__dirname, "./input/test.css");
+    let outputFile = path.resolve(__dirname, "./output/html-font-size.css");
+    return runCase(inputFile, outputFile, {
+      targetUnit: "rem",
+      htmlFontSize: 16,
+    });
+  });
+
+  test("no px values", () => {
+    let inputFile = path.resolve(__dirname, "./input/no-px.css");
+    let outputFile = path.resolve(__dirname, "./input/no-px.css");
+    return runCase(inputFile, outputFile);
+  });
+
+  test("px in url and quotes", () => {
+    let inputFile = path.resolve(__dirname, "./input/url-quotes.css");
+    let outputFile = path.resolve(__dirname, "./output/url-quotes.css");
+    return runCase(inputFile, outputFile, {
+      targetUnit: "rem",
+      htmlFontSize: 16,
+    });
+  });
+
+  test("repeated selectors", () => {
+    let inputFile = path.resolve(__dirname, "./input/repeated-selectors.css");
+    let outputFile = path.resolve(__dirname, "./output/repeated-selectors.css");
+    return runCase(inputFile, outputFile, {
+      targetUnit: "rem",
+    });
   });
 });
 

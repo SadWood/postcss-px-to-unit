@@ -1,0 +1,13 @@
+.url-path {
+  background-image: url("/path/with/10px/image.jpg");
+}
+
+.quoted {
+  content: "This is 15px text";
+  content: "Another 20px example";
+}
+
+.real-px {
+  width: 1rem;
+  height: 2rem;
+}

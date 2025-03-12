@@ -24,8 +24,22 @@ function createConverter(conversionFn) {
   };
 }
 
-const matchesRule = (value, rule) =>
-  typeof rule === "string" ? value.includes(rule) : rule.test(value);
+// 缓存匹配规则结果
+function createRuleMatcher() {
+  const cache = new Map();
+
+  return (value, rule) => {
+    const key = `${value}-${rule instanceof RegExp ? rule.toString() : rule}`;
+    if (!cache.has(key)) {
+      const result =
+        typeof rule === "string" ? value.includes(rule) : rule.test(value);
+      cache.set(key, result);
+    }
+    return cache.get(key);
+  };
+}
+
+const matchesRule = createRuleMatcher();
 
 const isExcluded = (value, rules) =>
   Array.isArray(rules) &&
@@ -44,38 +58,71 @@ export default (options = {}) => {
     excludeProperties = [],
   } = options;
 
-  // 创建缓存的单位转换器
+  // 预计算常用值
+  const htmlFontSizeInverse = 1 / htmlFontSize;
+  const viewportWidthInverse = 100 / viewportWidth;
+
+  // 创建缓存的单位转换器，优化计算方式
   const toRem = createConverter(
-    (px, precision) => `${toFixed(px / htmlFontSize, precision)}rem`
+    (px, precision) => `${toFixed(px * htmlFontSizeInverse, precision)}rem`
   );
 
   const toVw = createConverter(
-    (px, precision) => `${toFixed((px / viewportWidth) * 100, precision)}vw`
+    (px, precision) => `${toFixed(px * viewportWidthInverse, precision)}vw`
   );
 
-  // 替换函数
-  const createReplacer = (converter) => (match, pxValue) => {
-    // 如果没有捕获到px数值(即匹配的是引号内容或URL)，直接返回原字符串
-    if (pxValue === undefined) {
-      return match;
-    }
+  // 缓存需要处理的单位类型，避免重复判断
+  const processVw = targetUnit === "vw" || targetUnit === "vw&rem";
+  const processRem = targetUnit === "rem" || targetUnit === "vw&rem";
 
-    const pixelValue = parseFloat(pxValue);
-    return pixelValue <= ignoreThreshold
-      ? match
-      : converter(pixelValue, unitPrecision);
+  // 替换函数
+  const createReplacer = (converter) => {
+    const replacerCache = new Map();
+
+    return (match, pxValue) => {
+      // 如果没有捕获到px数值(即匹配的是引号内容或URL)，直接返回原字符串
+      if (pxValue === undefined) {
+        return match;
+      }
+
+      // 使用缓存避免重复计算
+      if (replacerCache.has(pxValue)) {
+        return replacerCache.get(pxValue);
+      }
+
+      const pixelValue = parseFloat(pxValue);
+      const result =
+        pixelValue <= ignoreThreshold
+          ? match
+          : converter(pixelValue, unitPrecision);
+
+      replacerCache.set(pxValue, result);
+      return result;
+    };
   };
 
-  const remReplacer = createReplacer(toRem);
-  const vwReplacer = createReplacer(toVw);
+  const remReplacer = processRem ? createReplacer(toRem) : null;
+  const vwReplacer = processVw ? createReplacer(toVw) : null;
+
+  // 编译一个文件级的缓存来存储已处理过的选择器
+  const processedSelectors = new Set();
 
   return {
     postcssPlugin: "postcss-px-to-unit",
     Once(root) {
       const inputFile = root.source.input.file;
+
+      // 先检查文件是否被排除
       if (isExcluded(inputFile, excludeFiles)) return;
 
+      // 快速标记已处理的规则
+      processedSelectors.clear();
+
       root.walkRules((rule) => {
+        // 避免重复处理相同选择器
+        if (processedSelectors.has(rule.selector)) return;
+        processedSelectors.add(rule.selector);
+
         if (isExcluded(rule.selector, excludeSelectors)) return;
 
         rule.walkDecls((decl) => {
@@ -89,7 +136,7 @@ export default (options = {}) => {
           let vwValue, remValue;
 
           // 只计算需要的值
-          if (targetUnit === "vw" || targetUnit === "vw&rem") {
+          if (processVw) {
             vwValue = originalValue.replace(pxReg, (match, px) => {
               const result = vwReplacer(match, px);
               if (result !== match) hasChange = true;
@@ -97,7 +144,7 @@ export default (options = {}) => {
             });
           }
 
-          if (targetUnit === "rem" || targetUnit === "vw&rem") {
+          if (processRem) {
             remValue = originalValue.replace(pxReg, (match, px) => {
               const result = remReplacer(match, px);
               if (result !== match) hasChange = true;

@@ -1,0 +1,9 @@
+.test {
+  display: block;
+  width: 0.5vw;
+  height: calc(100% - 2vw);
+  border: 0.5px;
+  border-width: 0.5vw;
+  transform: translate3d(0.75px, 1.83333vw, 0.5vw);
+  color: red;
+}

@@ -2,8 +2,8 @@
   display: block;
   width: 3.75px;
   height: calc(100% - 0.4rem);
-  border: .5px;
+  border: 0.5px;
   border-width: 3.75px;
-  transform: translate3d(.75px, 0.36667rem, 3.75px);
+  transform: translate3d(0.75px, 0.36667rem, 3.75px);
   color: red;
 }
