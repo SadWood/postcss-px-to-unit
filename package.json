@@ -3,11 +3,23 @@
   "version": "3.2.0",
   "description": "A postcss plugin to convert px to relative length units (vw / rem)",
   "main": "index.js",
+  "types": "index.d.ts",
   "type": "module",
   "scripts": {
     "dev": "node ./test/dev.js",
-    "test": "jest ./test --coverage"
+    "test": "jest ./test --coverage",
+    "prepublishOnly": "npm test",
+    "publish": "npm publish",
+    "release:patch": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish"
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "postcss",
     "px2rem",

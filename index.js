@@ -11,9 +11,36 @@ function toFixed(number, precision) {
   return Math.round(number * factor) / factor;
 }
 
-// 创建带缓存的转换函数
-function createConverter(conversionFn) {
+// 创建LRU缓存，限制缓存大小
+function createLRUCache(maxSize = 100) {
   const cache = new Map();
+  return {
+    get(key) {
+      if (!cache.has(key)) return undefined;
+      const value = cache.get(key);
+      // 访问时将项移到最近使用（删除后重新添加）
+      cache.delete(key);
+      cache.set(key, value);
+      return value;
+    },
+    set(key, value) {
+      if (cache.has(key)) {
+        cache.delete(key);
+      } else if (cache.size >= maxSize) {
+        // 删除最旧的项（Map的第一个条目）
+        cache.delete(cache.keys().next().value);
+      }
+      cache.set(key, value);
+    },
+    has(key) {
+      return cache.has(key);
+    },
+  };
+}
+
+// 创建带缓存的转换函数
+function createConverter(conversionFn, cacheSize = 100) {
+  const cache = createLRUCache(cacheSize);
 
   return (pixelValue, precision) => {
     const key = `${pixelValue}-${precision}`;
@@ -24,22 +51,8 @@ function createConverter(conversionFn) {
   };
 }
 
-// 缓存匹配规则结果
-function createRuleMatcher() {
-  const cache = new Map();
-
-  return (value, rule) => {
-    const key = `${value}-${rule instanceof RegExp ? rule.toString() : rule}`;
-    if (!cache.has(key)) {
-      const result =
-        typeof rule === "string" ? value.includes(rule) : rule.test(value);
-      cache.set(key, result);
-    }
-    return cache.get(key);
-  };
-}
-
-const matchesRule = createRuleMatcher();
+const matchesRule = (value, rule) =>
+  typeof rule === "string" ? value.includes(rule) : rule.test(value);
 
 const isExcluded = (value, rules) =>
   Array.isArray(rules) &&
@@ -56,156 +69,100 @@ export default (options = {}) => {
     excludeFiles = [],
     excludeSelectors = [],
     excludeProperties = [],
+    cacheSize = 100, // 新增：缓存大小配置
+    debug = false, // 新增：调试模式配置
   } = options;
 
-  // 预计算常用值
-  const htmlFontSizeInverse = 1 / htmlFontSize;
-  const viewportWidthInverse = 100 / viewportWidth;
+  // 创建logger函数
+  const log = debug ? console.log : () => {};
 
-  // 创建缓存的单位转换器，优化计算方式
+  // 创建缓存的单位转换器，使用自定义缓存大小
   const toRem = createConverter(
-    (px, precision) => `${toFixed(px * htmlFontSizeInverse, precision)}rem`
+    (px, precision) => `${toFixed(px / htmlFontSize, precision)}rem`,
+    cacheSize
   );
 
   const toVw = createConverter(
-    (px, precision) => `${toFixed(px * viewportWidthInverse, precision)}vw`
+    (px, precision) => `${toFixed((px / viewportWidth) * 100, precision)}vw`,
+    cacheSize
   );
 
-  // 缓存需要处理的单位类型，避免重复判断
-  const processVw = targetUnit === "vw" || targetUnit === "vw&rem";
-  const processRem = targetUnit === "rem" || targetUnit === "vw&rem";
-
   // 替换函数
-  const createReplacer = (converter) => {
-    const replacerCache = new Map();
-
-    return (match, pxValue) => {
-      // 如果没有捕获到px数值(即匹配的是引号内容或URL)，直接返回原字符串
-      if (pxValue === undefined) {
-        return match;
-      }
-
-      // 使用缓存避免重复计算
-      if (replacerCache.has(pxValue)) {
-        return replacerCache.get(pxValue);
-      }
-
-      const pixelValue = parseFloat(pxValue);
-      const result =
-        pixelValue <= ignoreThreshold
-          ? match
-          : converter(pixelValue, unitPrecision);
-
-      replacerCache.set(pxValue, result);
-      return result;
-    };
-  };
-
-  const remReplacer = processRem ? createReplacer(toRem) : null;
-  const vwReplacer = processVw ? createReplacer(toVw) : null;
-
-  // 创建全局值转换缓存
-  const valueCache = new Map();
-
-  // 创建一个单次转换函数，处理vw和rem的同时转换
-  const convertValue = (originalValue) => {
-    // 只需一次替换操作就能确定是否需要转换
-    const needsConversion =
-      originalValue.replace(pxReg, (match, pxValue) => {
-        if (pxValue !== undefined && parseFloat(pxValue) > ignoreThreshold) {
-          return "#"; // 任意占位符，只是用来标记需要转换
-        }
-        return match;
-      }) !== originalValue;
-
-    let hasChange = false;
-    let vwValue = originalValue,
-      remValue = originalValue;
-
-    // 一次性标记是否有px需要转换，避免多次执行正则表达式
-    let hasPx = false;
-    const checkPx = originalValue.replace(pxReg, (match, px) => {
-      if (px !== undefined && parseFloat(px) > ignoreThreshold) {
-        hasPx = true;
-      }
+  const createReplacer = (converter) => (match, pxValue) => {
+    // 如果没有捕获到px数值(即匹配的是引号内容或URL)，直接返回原字符串
+    if (pxValue === undefined) {
       return match;
-    });
-
-    if (!hasPx) {
-      valueCache.set(originalValue, { hasChange: false });
-      return { hasChange: false };
     }
 
-    hasChange = true;
-
-    // 只在需要时进行实际转换
-    if (processVw) {
-      vwValue = originalValue.replace(pxReg, vwReplacer);
-    }
-
-    if (processRem) {
-      remValue = originalValue.replace(pxReg, remReplacer);
-    }
-
-    valueCache.set(originalValue, {
-      hasChange,
-      vwValue,
-      remValue,
-    });
-
-    return { hasChange, vwValue, remValue };
+    const pixelValue = parseFloat(pxValue);
+    return pixelValue <= ignoreThreshold
+      ? match
+      : converter(pixelValue, unitPrecision);
   };
 
-  // 编译一个文件级的缓存来存储已处理过的选择器
-  const processedSelectors = new Set();
+  const remReplacer = createReplacer(toRem);
+  const vwReplacer = createReplacer(toVw);
+
+  // 优化：预编译排除规则检查函数
+  const isFileExcluded = (file) => isExcluded(file, excludeFiles);
+  const isSelectorExcluded = (selector) =>
+    isExcluded(selector, excludeSelectors);
+  const isPropExcluded = (prop) => isExcluded(prop, excludeProperties);
 
   return {
     postcssPlugin: "postcss-px-to-unit",
     Once(root) {
       const inputFile = root.source.input.file;
+      if (isFileExcluded(inputFile)) {
+        log(`[px-to-unit] 跳过文件: ${inputFile}`);
+        return;
+      }
 
-      // 先检查文件是否被排除
-      if (isExcluded(inputFile, excludeFiles)) return;
-
-      // 快速标记已处理的规则
-      processedSelectors.clear();
+      log(`[px-to-unit] 处理文件: ${inputFile}`);
 
       root.walkRules((rule) => {
-        // 避免重复处理相同选择器
-        if (processedSelectors.has(rule.selector)) return;
-        processedSelectors.add(rule.selector);
-
-        if (isExcluded(rule.selector, excludeSelectors)) return;
+        if (isSelectorExcluded(rule.selector)) {
+          log(`[px-to-unit] 跳过选择器: ${rule.selector}`);
+          return;
+        }
 
         rule.walkDecls((decl) => {
-          if (isExcluded(decl.prop, excludeProperties)) return;
-
-          const originalValue = decl.value;
-          if (!originalValue.includes("px")) return;
-
-          // 使用缓存检查这个值是否已经处理过
-          const cacheKey = originalValue;
-          if (valueCache.has(cacheKey)) {
-            const cachedResult = valueCache.get(cacheKey);
-
-            if (!cachedResult.hasChange) return;
-
-            if (targetUnit === "vw") {
-              decl.value = cachedResult.vwValue;
-            } else if (targetUnit === "rem") {
-              decl.value = cachedResult.remValue;
-            } else if (targetUnit === "vw&rem") {
-              decl.value = cachedResult.remValue;
-              decl.after({
-                prop: decl.prop,
-                value: cachedResult.vwValue,
-              });
-            }
+          if (isPropExcluded(decl.prop)) {
+            log(`[px-to-unit] 跳过属性: ${decl.prop}`);
             return;
           }
 
-          // 使用缓存检查这个值是否已经处理过
-          const { hasChange, vwValue, remValue } = convertValue(originalValue);
+          // 快速检查是否包含 px，不包含则提前退出
+          const originalValue = decl.value;
+          if (!originalValue.includes("px")) return;
+
+          let hasChange = false;
+          let vwValue, remValue;
+
+          // 只计算需要的值
+          if (targetUnit === "vw" || targetUnit === "vw&rem") {
+            vwValue = originalValue.replace(pxReg, (match, px) => {
+              const result = vwReplacer(match, px);
+              if (result !== match) hasChange = true;
+              return result;
+            });
+
+            if (debug && hasChange) {
+              log(`[px-to-unit] 转换: "${originalValue}" -> "${vwValue}"`);
+            }
+          }
+
+          if (targetUnit === "rem" || targetUnit === "vw&rem") {
+            remValue = originalValue.replace(pxReg, (match, px) => {
+              const result = remReplacer(match, px);
+              if (result !== match) hasChange = true;
+              return result;
+            });
+
+            if (debug && hasChange) {
+              log(`[px-to-unit] 转换: "${originalValue}" -> "${remValue}"`);
+            }
+          }
 
           if (!hasChange) return;
 

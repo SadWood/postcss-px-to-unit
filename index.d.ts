@@ -10,9 +10,11 @@ interface Options {
   excludeFiles?: (string | RegExp)[];
   excludeSelectors?: (string | RegExp)[];
   excludeProperties?: (string | RegExp)[];
+  cacheSize?: number;
+  debug?: boolean;
 }
 
-declare const postcssPxToUnit: (options?: Options) => Plugin;
+declare const PxToUnit: (options?: Options) => Plugin;
 
-export default postcssPxToUnit;
+export default PxToUnit;
 export const postcss: boolean;
