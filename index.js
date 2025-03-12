@@ -104,6 +104,58 @@ export default (options = {}) => {
   const remReplacer = processRem ? createReplacer(toRem) : null;
   const vwReplacer = processVw ? createReplacer(toVw) : null;
 
+  // 创建全局值转换缓存
+  const valueCache = new Map();
+
+  // 创建一个单次转换函数，处理vw和rem的同时转换
+  const convertValue = (originalValue) => {
+    // 只需一次替换操作就能确定是否需要转换
+    const needsConversion =
+      originalValue.replace(pxReg, (match, pxValue) => {
+        if (pxValue !== undefined && parseFloat(pxValue) > ignoreThreshold) {
+          return "#"; // 任意占位符，只是用来标记需要转换
+        }
+        return match;
+      }) !== originalValue;
+
+    let hasChange = false;
+    let vwValue = originalValue,
+      remValue = originalValue;
+
+    // 一次性标记是否有px需要转换，避免多次执行正则表达式
+    let hasPx = false;
+    const checkPx = originalValue.replace(pxReg, (match, px) => {
+      if (px !== undefined && parseFloat(px) > ignoreThreshold) {
+        hasPx = true;
+      }
+      return match;
+    });
+
+    if (!hasPx) {
+      valueCache.set(originalValue, { hasChange: false });
+      return { hasChange: false };
+    }
+
+    hasChange = true;
+
+    // 只在需要时进行实际转换
+    if (processVw) {
+      vwValue = originalValue.replace(pxReg, vwReplacer);
+    }
+
+    if (processRem) {
+      remValue = originalValue.replace(pxReg, remReplacer);
+    }
+
+    valueCache.set(originalValue, {
+      hasChange,
+      vwValue,
+      remValue,
+    });
+
+    return { hasChange, vwValue, remValue };
+  };
+
   // 编译一个文件级的缓存来存储已处理过的选择器
   const processedSelectors = new Set();
 
@@ -128,29 +180,32 @@ export default (options = {}) => {
         rule.walkDecls((decl) => {
           if (isExcluded(decl.prop, excludeProperties)) return;
 
-          // 快速检查是否包含 px，不包含则提前退出
           const originalValue = decl.value;
           if (!originalValue.includes("px")) return;
 
-          let hasChange = false;
-          let vwValue, remValue;
+          // 使用缓存检查这个值是否已经处理过
+          const cacheKey = originalValue;
+          if (valueCache.has(cacheKey)) {
+            const cachedResult = valueCache.get(cacheKey);
 
-          // 只计算需要的值
-          if (processVw) {
-            vwValue = originalValue.replace(pxReg, (match, px) => {
-              const result = vwReplacer(match, px);
-              if (result !== match) hasChange = true;
-              return result;
-            });
+            if (!cachedResult.hasChange) return;
+
+            if (targetUnit === "vw") {
+              decl.value = cachedResult.vwValue;
+            } else if (targetUnit === "rem") {
+              decl.value = cachedResult.remValue;
+            } else if (targetUnit === "vw&rem") {
+              decl.value = cachedResult.remValue;
+              decl.after({
+                prop: decl.prop,
+                value: cachedResult.vwValue,
+              });
+            }
+            return;
           }
 
-          if (processRem) {
-            remValue = originalValue.replace(pxReg, (match, px) => {
-              const result = remReplacer(match, px);
-              if (result !== match) hasChange = true;
-              return result;
-            });
-          }
+          // 使用缓存检查这个值是否已经处理过
+          const { hasChange, vwValue, remValue } = convertValue(originalValue);
 
           if (!hasChange) return;
 

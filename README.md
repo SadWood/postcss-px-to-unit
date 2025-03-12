@@ -1,8 +1,5 @@
 # postcss-px-to-unit
 
-[![npm version](https://badge.fury.io/js/postcss-px-to-unit.svg)](https://badge.fury.io/js/postcss-px-to-unit)
-[![Build Status](https://travis-ci.org/SadWood/postcss-px-to-unit.svg?branch=master)](https://travis-ci.org/SadWood/postcss-px-to-unit)
-
 An efficient PostCSS plugin for converting px units to relative length units (vw / rem). This project has been refactored with performance optimizations, providing faster processing speed and more reliable conversion results.
 
 ## Install
