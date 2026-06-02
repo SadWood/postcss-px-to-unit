@@ -59,12 +59,13 @@ PxToUnit({
   targetUnit: "vw",
   ignoreThreshold: 1,
   viewportWidth: 375,
-  viewportHeight: 667,
   htmlFontSize: 37.5,
   unitPrecision: 5,
   excludeFiles: [],
   excludeSelectors: [],
   excludeProperties: [],
+  cacheSize: 100,
+  debug: false,
 });
 ```
 
@@ -73,12 +74,13 @@ PxToUnit({
 | targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'rem' and 'vw&rem'              |
 | ignoreThreshold   |    1    | px values less than this threshold won't be converted                      |
 | viewportWidth     |   375   | Base viewport width (for targetUnit: 'vw')                                 |
-| viewportHeight    |   667   | Base viewport height (for targetUnit: 'vw', currently unused)              |
 | htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                |
 | unitPrecision     |    5    | Unit value precision                                                       |
 | excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])           |
 | excludeSelectors  |   []    | Exclude CSS selectors, supports string and regexp. (example: ['.ignore'])  |
 | excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/]) |
+| cacheSize         |   100   | Max number of cached conversion results (LRU)                              |
+| debug             |  false  | Print debug logs of skipped/converted values                               |
 
 ### targetUnit: 'vw&rem' mode
 

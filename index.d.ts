@@ -4,7 +4,6 @@ interface Options {
   targetUnit?: "vw" | "rem" | "vw&rem";
   ignoreThreshold?: number;
   viewportWidth?: number;
-  viewportHeight?: number;
   htmlFontSize?: number;
   unitPrecision?: number;
   excludeFiles?: (string | RegExp)[];
