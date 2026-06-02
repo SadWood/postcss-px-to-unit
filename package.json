@@ -8,10 +8,7 @@
   "scripts": {
     "dev": "node ./test/dev.js",
     "test": "jest ./test --coverage",
-    "prepublishOnly": "npm test",
-    "release:patch": "npm version patch",
-    "release:minor": "npm version minor",
-    "release:major": "npm version major"
+    "prepublishOnly": "npm test"
   },
   "files": [
     "index.js",
