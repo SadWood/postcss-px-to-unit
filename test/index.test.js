@@ -13,6 +13,15 @@ async function runCase(input, output, options) {
   expect(result.warnings()).toHaveLength(0);
 }
 
+async function transformCss(css, options, processOptions = {}) {
+  const result = await postcss([PxToUnit(options)]).process(css, {
+    from: undefined,
+    ...processOptions,
+  });
+  expect(result.warnings()).toHaveLength(0);
+  return result.css;
+}
+
 describe("Convert", () => {
   test("px to rem", () => {
     let inputFile = path.resolve(__dirname, "./input/test.css");
@@ -34,6 +43,14 @@ describe("Convert", () => {
     return runCase(inputFile, outputFile, {
       targetUnit: "vw&rem",
     });
+  });
+
+  test("px to vh", async () => {
+    await expect(
+      transformCss(".test{width:10px;height:20px}", {
+        targetUnit: "vh",
+      })
+    ).resolves.toBe(".test{width:1.49925vh;height:2.9985vh}");
   });
 
   test("ignore threshold", () => {
@@ -69,6 +86,15 @@ describe("Convert", () => {
     });
   });
 
+  test("custom viewportHeight", async () => {
+    await expect(
+      transformCss(".test{height:10px}", {
+        targetUnit: "vh",
+        viewportHeight: 500,
+      })
+    ).resolves.toBe(".test{height:2vh}");
+  });
+
   test("custom htmlFontSize", () => {
     let inputFile = path.resolve(__dirname, "./input/test.css");
     let outputFile = path.resolve(__dirname, "./output/html-font-size.css");
@@ -99,6 +125,14 @@ describe("Convert", () => {
     return runCase(inputFile, outputFile, {
       targetUnit: "rem",
     });
+  });
+
+  test("uppercase PX values are ignored", async () => {
+    await expect(
+      transformCss(".test{width:10PX;height:10px}", {
+        targetUnit: "vh",
+      })
+    ).resolves.toBe(".test{width:10PX;height:1.49925vh}");
   });
 });
 
@@ -144,5 +178,85 @@ describe("Exclude rules", () => {
     return runCase(inputFile, outputFile, {
       excludeProperties: ["width"],
     });
+  });
+
+  test("missing source file does not break string exclude files", async () => {
+    await expect(
+      transformCss(".test{width:10px}", {
+        excludeFiles: ["node_modules"],
+      })
+    ).resolves.toBe(".test{width:2.66667vw}");
+  });
+
+  test("missing source file does not break regexp exclude files", async () => {
+    await expect(
+      transformCss(".test{width:10px}", {
+        excludeFiles: [/node_modules/],
+      })
+    ).resolves.toBe(".test{width:2.66667vw}");
+  });
+});
+
+describe("Option edge cases", () => {
+  test.each([0, -1, Number.NaN, Infinity])(
+    "cacheSize %p keeps conversion output stable",
+    async (cacheSize) => {
+      await expect(
+        transformCss(".test{width:10px}", {
+          cacheSize,
+        })
+      ).resolves.toBe(".test{width:2.66667vw}");
+    }
+  );
+
+  test.each([0, -1, Number.NaN, Infinity])(
+    "viewportWidth %p falls back to the default value",
+    async (viewportWidth) => {
+      await expect(
+        transformCss(".test{width:10px}", {
+          viewportWidth,
+        })
+      ).resolves.toBe(".test{width:2.66667vw}");
+    }
+  );
+
+  test.each([0, -1, Number.NaN, Infinity])(
+    "viewportHeight %p falls back to the default value",
+    async (viewportHeight) => {
+      await expect(
+        transformCss(".test{width:10px}", {
+          targetUnit: "vh",
+          viewportHeight,
+        })
+      ).resolves.toBe(".test{width:1.49925vh}");
+    }
+  );
+
+  test.each([0, -1, Number.NaN, Infinity])(
+    "htmlFontSize %p falls back to the default value",
+    async (htmlFontSize) => {
+      await expect(
+        transformCss(".test{width:10px}", {
+          targetUnit: "rem",
+          htmlFontSize,
+        })
+      ).resolves.toBe(".test{width:0.26667rem}");
+    }
+  );
+
+  test("zero ignoreThreshold converts 1px values", async () => {
+    await expect(
+      transformCss(".test{width:1px}", {
+        ignoreThreshold: 0,
+      })
+    ).resolves.toBe(".test{width:0.26667vw}");
+  });
+
+  test("unsupported targetUnit leaves declarations unchanged", async () => {
+    await expect(
+      transformCss(".test{width:10px}", {
+        targetUnit: "px",
+      })
+    ).resolves.toBe(".test{width:10px}");
   });
 });
