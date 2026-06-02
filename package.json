@@ -1,7 +1,7 @@
 {
   "name": "postcss-px-to-unit",
   "version": "3.3.2",
-  "description": "A postcss plugin to convert px to relative length units (vw / rem)",
+  "description": "A postcss plugin to convert px to relative length units (vw / vh / rem)",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -20,7 +20,9 @@
     "postcss",
     "px2rem",
     "px2vw",
+    "px2vh",
     "rem",
+    "vh",
     "viewport"
   ],
   "author": "SadWood",

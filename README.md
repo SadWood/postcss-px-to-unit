@@ -1,6 +1,6 @@
 # postcss-px-to-unit
 
-An efficient PostCSS plugin for converting px units to relative length units (vw / rem). This project has been refactored with performance optimizations, providing faster processing speed and more reliable conversion results.
+An efficient PostCSS plugin for converting px units to relative length units (vw / vh / rem). This project has been refactored with performance optimizations, providing faster processing speed and more reliable conversion results.
 
 ## Install
 
@@ -59,6 +59,7 @@ PxToUnit({
   targetUnit: "vw",
   ignoreThreshold: 1,
   viewportWidth: 375,
+  viewportHeight: 667,
   htmlFontSize: 37.5,
   unitPrecision: 5,
   excludeFiles: [],
@@ -71,9 +72,10 @@ PxToUnit({
 
 | Option            | Default | Description                                                                |
 | ----------------- | :-----: | :------------------------------------------------------------------------- |
-| targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'rem' and 'vw&rem'              |
+| targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'vh', 'rem' and 'vw&rem'        |
 | ignoreThreshold   |    1    | px values less than this threshold won't be converted                      |
 | viewportWidth     |   375   | Base viewport width (for targetUnit: 'vw')                                 |
+| viewportHeight    |   667   | Base viewport height (for targetUnit: 'vh')                                |
 | htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                |
 | unitPrecision     |    5    | Unit value precision                                                       |
 | excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])           |
@@ -81,6 +83,22 @@ PxToUnit({
 | excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/]) |
 | cacheSize         |   100   | Max number of cached conversion results (LRU)                              |
 | debug             |  false  | Print debug logs of skipped/converted values                               |
+
+### targetUnit: 'vh' mode
+
+Use the 'vh' mode when a value should scale against the viewport height.
+
+```css
+/* Input */
+.test {
+  height: 66.7px;
+}
+
+/* Output */
+.test {
+  height: 10vh;
+}
+```
 
 ### targetUnit: 'vw&rem' mode
 
@@ -107,7 +125,7 @@ For browsers that don't support vw, it will automatically use rem for layout.
 
 The conversion process is case sensitive. You can use PX to avoid conversion in special cases.
 
-```css
+```text
 /* Input */
 .test {
   padding: 3.75px 3.75PX;

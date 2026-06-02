@@ -75,6 +75,7 @@ export default (options = {}) => {
     targetUnit = "vw",
     ignoreThreshold = 1,
     viewportWidth = 375,
+    viewportHeight = 667,
     htmlFontSize = 37.5,
     unitPrecision = 5,
     excludeFiles = [],
@@ -85,6 +86,7 @@ export default (options = {}) => {
   } = options;
 
   const normalizedViewportWidth = normalizePositiveNumber(viewportWidth, 375);
+  const normalizedViewportHeight = normalizePositiveNumber(viewportHeight, 667);
   const normalizedHtmlFontSize = normalizePositiveNumber(htmlFontSize, 37.5);
 
   const log = debug ? console.log : () => {};
@@ -97,6 +99,12 @@ export default (options = {}) => {
   const toVw = createConverter(
     (px, precision) =>
       `${toFixed((px / normalizedViewportWidth) * 100, precision)}vw`,
+    cacheSize
+  );
+
+  const toVh = createConverter(
+    (px, precision) =>
+      `${toFixed((px / normalizedViewportHeight) * 100, precision)}vh`,
     cacheSize
   );
 
@@ -113,6 +121,7 @@ export default (options = {}) => {
 
   const remReplacer = createReplacer(toRem);
   const vwReplacer = createReplacer(toVw);
+  const vhReplacer = createReplacer(toVh);
 
   const isFileExcluded = (file) => isExcluded(file, excludeFiles);
   const isSelectorExcluded = (selector) =>
@@ -146,7 +155,7 @@ export default (options = {}) => {
           if (!originalValue.includes("px")) return;
 
           let hasChange = false;
-          let vwValue, remValue;
+          let vwValue, vhValue, remValue;
 
           if (targetUnit === "vw" || targetUnit === "vw&rem") {
             vwValue = originalValue.replace(pxReg, (match, px) => {
@@ -157,6 +166,18 @@ export default (options = {}) => {
 
             if (debug && hasChange) {
               log(`[px-to-unit] 转换: "${originalValue}" -> "${vwValue}"`);
+            }
+          }
+
+          if (targetUnit === "vh") {
+            vhValue = originalValue.replace(pxReg, (match, px) => {
+              const result = vhReplacer(match, px);
+              if (result !== match) hasChange = true;
+              return result;
+            });
+
+            if (debug && hasChange) {
+              log(`[px-to-unit] 转换: "${originalValue}" -> "${vhValue}"`);
             }
           }
 
@@ -176,6 +197,8 @@ export default (options = {}) => {
 
           if (targetUnit === "vw") {
             decl.value = vwValue;
+          } else if (targetUnit === "vh") {
+            decl.value = vhValue;
           } else if (targetUnit === "rem") {
             decl.value = remValue;
           } else if (targetUnit === "vw&rem") {

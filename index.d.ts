@@ -1,9 +1,10 @@
 import { Plugin } from "postcss";
 
 interface Options {
-  targetUnit?: "vw" | "rem" | "vw&rem";
+  targetUnit?: "vw" | "vh" | "rem" | "vw&rem";
   ignoreThreshold?: number;
   viewportWidth?: number;
+  viewportHeight?: number;
   htmlFontSize?: number;
   unitPrecision?: number;
   excludeFiles?: (string | RegExp)[];
