@@ -1,9 +1,8 @@
-// 这个正则表达式用于匹配px值，但排除引号内和URL内的px
-// 四个部分:
-// 1. "[^"]+" - 匹配双引号中所有内容
-// 2. '[^']+' - 匹配单引号中所有内容
-// 3. url\([^\)]+\) - 匹配CSS URL函数
-// 4. (\d*\.?\d+)px - 捕获实际需要转换的px值
+// 该正则有四个分支：前三个分支跳过不应转换的上下文，最后一个分支捕获裸 px 数值。
+// 1. "[^"]+"：跳过双引号字符串。
+// 2. '[^']+'：跳过单引号字符串。
+// 3. url\([^\)]+\)：跳过 url(...)。
+// 4. (\d*\.?\d+)px：捕获可转换的 px 数值。
 const pxReg = /"[^"]+"|'[^']+'|url\([^\)]+\)|(\d*\.?\d+)px/g;
 
 function toFixed(number, precision) {
@@ -11,23 +10,32 @@ function toFixed(number, precision) {
   return Math.round(number * factor) / factor;
 }
 
-// 创建LRU缓存，限制缓存大小
+function normalizePositiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
 function createLRUCache(maxSize = 100) {
+  const limit =
+    maxSize === Infinity
+      ? Infinity
+      : Number.isFinite(maxSize) && maxSize > 0
+      ? Math.floor(maxSize)
+      : 0;
   const cache = new Map();
   return {
     get(key) {
       if (!cache.has(key)) return undefined;
       const value = cache.get(key);
-      // 访问时将项移到最近使用（删除后重新添加）
       cache.delete(key);
       cache.set(key, value);
       return value;
     },
     set(key, value) {
+      if (limit === 0) return;
       if (cache.has(key)) {
         cache.delete(key);
-      } else if (cache.size >= maxSize) {
-        // 删除最旧的项（Map的第一个条目）
+      } else if (cache.size >= limit) {
         cache.delete(cache.keys().next().value);
       }
       cache.set(key, value);
@@ -38,21 +46,24 @@ function createLRUCache(maxSize = 100) {
   };
 }
 
-// 创建带缓存的转换函数
 function createConverter(conversionFn, cacheSize = 100) {
   const cache = createLRUCache(cacheSize);
 
   return (pixelValue, precision) => {
     const key = `${pixelValue}-${precision}`;
-    if (!cache.has(key)) {
-      cache.set(key, conversionFn(pixelValue, precision));
-    }
-    return cache.get(key);
+    const cachedValue = cache.get(key);
+    if (cachedValue !== undefined) return cachedValue;
+
+    const convertedValue = conversionFn(pixelValue, precision);
+    cache.set(key, convertedValue);
+    return convertedValue;
   };
 }
 
-const matchesRule = (value, rule) =>
-  typeof rule === "string" ? value.includes(rule) : rule.test(value);
+const matchesRule = (value, rule) => {
+  if (typeof value !== "string") return false;
+  return typeof rule === "string" ? value.includes(rule) : rule.test(value);
+};
 
 const isExcluded = (value, rules) =>
   Array.isArray(rules) &&
@@ -69,27 +80,27 @@ export default (options = {}) => {
     excludeFiles = [],
     excludeSelectors = [],
     excludeProperties = [],
-    cacheSize = 100, // 新增：缓存大小配置
-    debug = false, // 新增：调试模式配置
+    cacheSize = 100,
+    debug = false,
   } = options;
 
-  // 创建logger函数
+  const normalizedViewportWidth = normalizePositiveNumber(viewportWidth, 375);
+  const normalizedHtmlFontSize = normalizePositiveNumber(htmlFontSize, 37.5);
+
   const log = debug ? console.log : () => {};
 
-  // 创建缓存的单位转换器，使用自定义缓存大小
   const toRem = createConverter(
-    (px, precision) => `${toFixed(px / htmlFontSize, precision)}rem`,
+    (px, precision) => `${toFixed(px / normalizedHtmlFontSize, precision)}rem`,
     cacheSize
   );
 
   const toVw = createConverter(
-    (px, precision) => `${toFixed((px / viewportWidth) * 100, precision)}vw`,
+    (px, precision) =>
+      `${toFixed((px / normalizedViewportWidth) * 100, precision)}vw`,
     cacheSize
   );
 
-  // 替换函数
   const createReplacer = (converter) => (match, pxValue) => {
-    // 如果没有捕获到px数值(即匹配的是引号内容或URL)，直接返回原字符串
     if (pxValue === undefined) {
       return match;
     }
@@ -103,7 +114,6 @@ export default (options = {}) => {
   const remReplacer = createReplacer(toRem);
   const vwReplacer = createReplacer(toVw);
 
-  // 优化：预编译排除规则检查函数
   const isFileExcluded = (file) => isExcluded(file, excludeFiles);
   const isSelectorExcluded = (selector) =>
     isExcluded(selector, excludeSelectors);
@@ -112,7 +122,7 @@ export default (options = {}) => {
   return {
     postcssPlugin: "postcss-px-to-unit",
     Once(root) {
-      const inputFile = root.source.input.file;
+      const inputFile = root.source?.input?.file;
       if (isFileExcluded(inputFile)) {
         log(`[px-to-unit] 跳过文件: ${inputFile}`);
         return;
@@ -132,14 +142,12 @@ export default (options = {}) => {
             return;
           }
 
-          // 快速检查是否包含 px，不包含则提前退出
           const originalValue = decl.value;
           if (!originalValue.includes("px")) return;
 
           let hasChange = false;
           let vwValue, remValue;
 
-          // 只计算需要的值
           if (targetUnit === "vw" || targetUnit === "vw&rem") {
             vwValue = originalValue.replace(pxReg, (match, px) => {
               const result = vwReplacer(match, px);
