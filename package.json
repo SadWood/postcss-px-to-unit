@@ -5,10 +5,12 @@
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
+  "packageManager": "pnpm@11.5.0",
   "scripts": {
     "dev": "node ./test/dev.js",
+    "bench": "node ./scripts/benchmark.js",
     "test": "jest ./test --coverage",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "pnpm test"
   },
   "files": [
     "index.js",
