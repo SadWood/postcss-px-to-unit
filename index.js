@@ -79,7 +79,11 @@ function createConverter(conversionFn, cacheSize = 100) {
 
 const matchesRule = (value, rule) => {
   if (typeof value !== "string") return false;
-  return typeof rule === "string" ? value.includes(rule) : rule.test(value);
+  if (typeof rule === "string") return value.includes(rule);
+  // 用 String.prototype.search 而非 RegExp.prototype.test：后者在正则带 g/y
+  // 标记时有状态（会推进 lastIndex），对同一规则连续匹配会时真时假，导致
+  // 第二个同名 selector/property/file 漏排除。search 不读写 lastIndex，天然规避。
+  return value.search(rule) !== -1;
 };
 
 const isExcluded = (value, rules) =>

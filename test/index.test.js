@@ -219,6 +219,39 @@ describe("Exclude rules", () => {
       }),
     ).resolves.toBe(".test{width:2.66667vw}");
   });
+
+  // 回归：带 g 标记的正则曾因 RegExp.test 推进 lastIndex，导致第二个同名
+  // selector/property/file 被漏排除（时真时假）。三类入口共用 matchesRule，
+  // 全部覆盖。
+  test("global-flag regexp excludes every matching selector", async () => {
+    await expect(
+      transformCss(".test{width:10px}.test{width:20px}", {
+        excludeSelectors: [/test/g],
+      }),
+    ).resolves.toBe(".test{width:10px}.test{width:20px}");
+  });
+
+  test("global-flag regexp excludes every matching property", async () => {
+    await expect(
+      transformCss(".a{width:10px;width:20px}", {
+        excludeProperties: [/width/g],
+      }),
+    ).resolves.toBe(".a{width:10px;width:20px}");
+  });
+
+  test("global-flag regexp excludes the file consistently", async () => {
+    const exclude = /styles/g;
+    const css = ".test{width:10px}";
+    // 同一插件实例对同一文件连续 Once 调用必须稳定排除，不能时真时假。
+    const first = await postcss([
+      PxToUnit({ excludeFiles: [exclude] }),
+    ]).process(css, { from: "/src/styles.css" });
+    const second = await postcss([
+      PxToUnit({ excludeFiles: [exclude] }),
+    ]).process(css, { from: "/src/styles.css" });
+    expect(first.css).toBe(css);
+    expect(second.css).toBe(css);
+  });
 });
 
 describe("Option edge cases", () => {
