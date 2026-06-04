@@ -291,6 +291,20 @@ describe("Option edge cases", () => {
     ).resolves.toBe(".test{width:3vw}");
   });
 
+  test.each([21, 100, 309, 400])(
+    "oversized unitPrecision %p is clamped to the max (no NaN)",
+    async (unitPrecision) => {
+      const clamped = await transformCss(".test{width:10px}", {
+        unitPrecision,
+      });
+      expect(clamped).not.toContain("NaN");
+      // clamp 到上限后应与显式传入上限 (20) 的结果一致
+      await expect(
+        transformCss(".test{width:10px}", { unitPrecision: 20 }),
+      ).resolves.toBe(clamped);
+    },
+  );
+
   test.each([Number.NaN, Infinity, -1])(
     "ignoreThreshold %p falls back to default and still converts",
     async (ignoreThreshold) => {

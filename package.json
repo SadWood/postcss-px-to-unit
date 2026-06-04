@@ -11,6 +11,11 @@
       "import": "./index.js",
       "default": "./index.js"
     },
+    "./index.js": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
     "./package.json": "./package.json"
   },
   "packageManager": "pnpm@11.5.0",

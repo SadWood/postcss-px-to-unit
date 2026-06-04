@@ -19,11 +19,18 @@ function normalizeNonNegativeNumber(value, fallback) {
   return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
-// 非负有限整数（允许 0），用于 unitPrecision；非法值（NaN/Infinity/负数）回退。
-function normalizeNonNegativeInteger(value, fallback) {
+// 非负有限整数（允许 0），用于 unitPrecision：非法值（NaN/Infinity/负数）回退，
+// 合法值再 clamp 到 max，避免超大 precision 让 Math.pow(10, p) 溢出为 Infinity
+// 进而产出 NaN（如 unitPrecision: 309）。
+function normalizeNonNegativeInteger(value, fallback, max = Infinity) {
   const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? Math.floor(number) : fallback;
+  if (!Number.isFinite(number) || number < 0) return fallback;
+  return Math.min(Math.floor(number), max);
 }
+
+// CSS 数值精度上限：超过约 16 位双精度本就无意义，20 足够覆盖所有实际场景
+// 且远低于 Math.pow(10, p) 的溢出阈值（p=309）。
+const MAX_UNIT_PRECISION = 20;
 
 function createLRUCache(maxSize = 100) {
   const limit =
@@ -98,7 +105,11 @@ export default (options = {}) => {
   const normalizedViewportWidth = normalizePositiveNumber(viewportWidth, 375);
   const normalizedViewportHeight = normalizePositiveNumber(viewportHeight, 667);
   const normalizedHtmlFontSize = normalizePositiveNumber(htmlFontSize, 37.5);
-  const normalizedUnitPrecision = normalizeNonNegativeInteger(unitPrecision, 5);
+  const normalizedUnitPrecision = normalizeNonNegativeInteger(
+    unitPrecision,
+    5,
+    MAX_UNIT_PRECISION,
+  );
   const normalizedIgnoreThreshold = normalizeNonNegativeNumber(
     ignoreThreshold,
     1,

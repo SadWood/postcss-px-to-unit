@@ -87,7 +87,7 @@ PxToUnit({
 ### Behavior notes
 
 - **Token-level value parsing.** Values are parsed into tokens before conversion, so only real `px` dimensions are touched. `px` appearing inside strings, `url(...)`, or CSS variable names is left untouched — e.g. `width: var(--size-10px)` stays `var(--size-10px)`. Normal cases like `calc(100% - 10px)` are still converted.
-- **Invalid numeric options fall back to defaults.** `viewportWidth` / `viewportHeight` / `htmlFontSize` must be positive finite numbers (otherwise they fall back to `375` / `667` / `37.5`). `unitPrecision` must be a non-negative finite integer (otherwise `5`). `ignoreThreshold` must be a non-negative finite number (otherwise `1`).
+- **Invalid numeric options fall back to defaults.** `viewportWidth` / `viewportHeight` / `htmlFontSize` must be positive finite numbers (otherwise they fall back to `375` / `667` / `37.5`). `unitPrecision` must be a non-negative finite integer (otherwise `5`) and is clamped to a maximum of `20` to avoid floating-point overflow. `ignoreThreshold` must be a non-negative finite number (otherwise `1`).
 - **Unsupported `targetUnit`.** Only `'vw'`, `'vh'`, `'rem'`, and `'vw&rem'` are supported. Any other value (including a wrong case like `'VW'`) emits a single PostCSS warning and performs no conversion.
 - **The `vw&rem` fallback combo only applies to `vw`/`rem`.** The `'vh'` mode emits a single `vh` declaration with no rem fallback.
 
