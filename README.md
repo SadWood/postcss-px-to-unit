@@ -73,7 +73,7 @@ PxToUnit({
 | Option            | Default | Description                                                                |
 | ----------------- | :-----: | :------------------------------------------------------------------------- |
 | targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'vh', 'rem' and 'vw&rem'        |
-| ignoreThreshold   |    1    | px values less than this threshold won't be converted                      |
+| ignoreThreshold   |    1    | px values less than or equal to this threshold won't be converted (compared by absolute value, so `-10px` is treated as `10px`) |
 | viewportWidth     |   375   | Base viewport width (for targetUnit: 'vw')                                 |
 | viewportHeight    |   667   | Base viewport height (for targetUnit: 'vh')                                |
 | htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                |
@@ -81,8 +81,15 @@ PxToUnit({
 | excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])           |
 | excludeSelectors  |   []    | Exclude CSS selectors, supports string and regexp. (example: ['.ignore'])  |
 | excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/]) |
-| cacheSize         |   100   | Max number of cached conversion results (LRU)                              |
+| cacheSize         |   100   | Max number of cached conversion results (LRU). Use `Infinity` for an unbounded cache, or `0` / a non-positive value to disable caching |
 | debug             |  false  | Print debug logs of skipped/converted values                               |
+
+### Behavior notes
+
+- **Token-level value parsing.** Values are parsed into tokens before conversion, so only real `px` dimensions are touched. `px` appearing inside strings, `url(...)`, or CSS variable names is left untouched — e.g. `width: var(--size-10px)` stays `var(--size-10px)`. Normal cases like `calc(100% - 10px)` are still converted.
+- **Invalid numeric options fall back to defaults.** `viewportWidth` / `viewportHeight` / `htmlFontSize` must be positive finite numbers (otherwise they fall back to `375` / `667` / `37.5`). `unitPrecision` must be a non-negative finite integer (otherwise `5`). `ignoreThreshold` must be a non-negative finite number (otherwise `1`).
+- **Unsupported `targetUnit`.** Only `'vw'`, `'vh'`, `'rem'`, and `'vw&rem'` are supported. Any other value (including a wrong case like `'VW'`) emits a single PostCSS warning and performs no conversion.
+- **The `vw&rem` fallback combo only applies to `vw`/`rem`.** The `'vh'` mode emits a single `vh` declaration with no rem fallback.
 
 ### targetUnit: 'vh' mode
 

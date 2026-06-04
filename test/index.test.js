@@ -134,6 +134,30 @@ describe("Convert", () => {
       })
     ).resolves.toBe(".test{width:10PX;height:1.49925vh}");
   });
+
+  test("px inside CSS variable names is not converted", async () => {
+    await expect(
+      transformCss(".a{width:var(--size-10px)}")
+    ).resolves.toBe(".a{width:var(--size-10px)}");
+  });
+
+  test("px inside calc is converted", async () => {
+    await expect(
+      transformCss(".a{width:calc(100% - 10px)}")
+    ).resolves.toBe(".a{width:calc(100% - 2.66667vw)}");
+  });
+
+  test("negative px values keep their sign", async () => {
+    await expect(
+      transformCss(".a{margin:-10px}")
+    ).resolves.toBe(".a{margin:-2.66667vw}");
+  });
+
+  test("px-like suffixes are not partially converted", async () => {
+    await expect(
+      transformCss(".a{animation-name:slide10px}")
+    ).resolves.toBe(".a{animation-name:slide10px}");
+  });
 });
 
 describe("Exclude rules", () => {
@@ -252,11 +276,39 @@ describe("Option edge cases", () => {
     ).resolves.toBe(".test{width:0.26667vw}");
   });
 
-  test("unsupported targetUnit leaves declarations unchanged", async () => {
+  test.each([Number.NaN, Infinity, -1])(
+    "unitPrecision %p falls back to default precision (5)",
+    async (unitPrecision) => {
+      await expect(
+        transformCss(".test{width:10px}", { unitPrecision })
+      ).resolves.toBe(".test{width:2.66667vw}");
+    }
+  );
+
+  test("unitPrecision 0 rounds to an integer", async () => {
     await expect(
-      transformCss(".test{width:10px}", {
-        targetUnit: "px",
-      })
-    ).resolves.toBe(".test{width:10px}");
+      transformCss(".test{width:10px}", { unitPrecision: 0 })
+    ).resolves.toBe(".test{width:3vw}");
+  });
+
+  test.each([Number.NaN, Infinity, -1])(
+    "ignoreThreshold %p falls back to default and still converts",
+    async (ignoreThreshold) => {
+      await expect(
+        transformCss(".test{width:10px}", { ignoreThreshold })
+      ).resolves.toBe(".test{width:2.66667vw}");
+    }
+  );
+
+  test("unsupported targetUnit leaves declarations unchanged and warns once", async () => {
+    const result = await postcss([PxToUnit({ targetUnit: "px" })]).process(
+      ".test{width:10px}",
+      { from: undefined }
+    );
+    expect(result.css).toBe(".test{width:10px}");
+
+    const warnings = result.warnings();
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].text).toContain('Unsupported targetUnit "px"');
   });
 });
