@@ -17,17 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
+      # 用 npm 而非 pnpm：pnpm 11 要求 Node >= 22.13，会让 Node 18/20 的矩阵项
+      # 在安装阶段就失败。npm 随每个 Node 版本捆绑，必然兼容；测试本身与包管理器
+      # 无关，本地开发仍用 pnpm（见 package.json packageManager 字段）。
       - name: Setup Node ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm install
 
       - name: Run tests
-        run: pnpm test
+        run: npm test
