@@ -19,11 +19,15 @@
     "./package.json": "./package.json"
   },
   "packageManager": "pnpm@11.5.0",
+  "engines": {
+    "node": "^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0"
+  },
   "scripts": {
     "dev": "node ./test/dev.js",
     "bench": "node ./scripts/benchmark.js",
     "test": "jest ./test --coverage",
-    "prepublishOnly": "pnpm test"
+    "verify:package": "node ./scripts/verify-package.js",
+    "prepublishOnly": "pnpm test && pnpm verify:package"
   },
   "files": [
     "index.js",
