@@ -1,6 +1,15 @@
 # Ignore artifacts:
 build
+dist
 coverage
+
+# Tooling state and lockfiles (not source):
+.omx
+pnpm-lock.yaml
+
+# Test fixtures are byte-compared data, not source:
+test/input
+test/output
 
 # Ignore all HTML files:
 *.html

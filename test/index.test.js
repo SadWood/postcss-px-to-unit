@@ -49,7 +49,7 @@ describe("Convert", () => {
     await expect(
       transformCss(".test{width:10px;height:20px}", {
         targetUnit: "vh",
-      })
+      }),
     ).resolves.toBe(".test{width:1.49925vh;height:2.9985vh}");
   });
 
@@ -91,7 +91,7 @@ describe("Convert", () => {
       transformCss(".test{height:10px}", {
         targetUnit: "vh",
         viewportHeight: 500,
-      })
+      }),
     ).resolves.toBe(".test{height:2vh}");
   });
 
@@ -131,32 +131,32 @@ describe("Convert", () => {
     await expect(
       transformCss(".test{width:10PX;height:10px}", {
         targetUnit: "vh",
-      })
+      }),
     ).resolves.toBe(".test{width:10PX;height:1.49925vh}");
   });
 
   test("px inside CSS variable names is not converted", async () => {
-    await expect(
-      transformCss(".a{width:var(--size-10px)}")
-    ).resolves.toBe(".a{width:var(--size-10px)}");
+    await expect(transformCss(".a{width:var(--size-10px)}")).resolves.toBe(
+      ".a{width:var(--size-10px)}",
+    );
   });
 
   test("px inside calc is converted", async () => {
-    await expect(
-      transformCss(".a{width:calc(100% - 10px)}")
-    ).resolves.toBe(".a{width:calc(100% - 2.66667vw)}");
+    await expect(transformCss(".a{width:calc(100% - 10px)}")).resolves.toBe(
+      ".a{width:calc(100% - 2.66667vw)}",
+    );
   });
 
   test("negative px values keep their sign", async () => {
-    await expect(
-      transformCss(".a{margin:-10px}")
-    ).resolves.toBe(".a{margin:-2.66667vw}");
+    await expect(transformCss(".a{margin:-10px}")).resolves.toBe(
+      ".a{margin:-2.66667vw}",
+    );
   });
 
   test("px-like suffixes are not partially converted", async () => {
-    await expect(
-      transformCss(".a{animation-name:slide10px}")
-    ).resolves.toBe(".a{animation-name:slide10px}");
+    await expect(transformCss(".a{animation-name:slide10px}")).resolves.toBe(
+      ".a{animation-name:slide10px}",
+    );
   });
 });
 
@@ -197,7 +197,7 @@ describe("Exclude rules", () => {
     let inputFile = path.resolve(__dirname, "./input/test.css");
     let outputFile = path.resolve(
       __dirname,
-      "./output/exclude-property-string.css"
+      "./output/exclude-property-string.css",
     );
     return runCase(inputFile, outputFile, {
       excludeProperties: ["width"],
@@ -208,7 +208,7 @@ describe("Exclude rules", () => {
     await expect(
       transformCss(".test{width:10px}", {
         excludeFiles: ["node_modules"],
-      })
+      }),
     ).resolves.toBe(".test{width:2.66667vw}");
   });
 
@@ -216,7 +216,7 @@ describe("Exclude rules", () => {
     await expect(
       transformCss(".test{width:10px}", {
         excludeFiles: [/node_modules/],
-      })
+      }),
     ).resolves.toBe(".test{width:2.66667vw}");
   });
 });
@@ -228,9 +228,9 @@ describe("Option edge cases", () => {
       await expect(
         transformCss(".test{width:10px}", {
           cacheSize,
-        })
+        }),
       ).resolves.toBe(".test{width:2.66667vw}");
-    }
+    },
   );
 
   test.each([0, -1, Number.NaN, Infinity])(
@@ -239,9 +239,9 @@ describe("Option edge cases", () => {
       await expect(
         transformCss(".test{width:10px}", {
           viewportWidth,
-        })
+        }),
       ).resolves.toBe(".test{width:2.66667vw}");
-    }
+    },
   );
 
   test.each([0, -1, Number.NaN, Infinity])(
@@ -251,9 +251,9 @@ describe("Option edge cases", () => {
         transformCss(".test{width:10px}", {
           targetUnit: "vh",
           viewportHeight,
-        })
+        }),
       ).resolves.toBe(".test{width:1.49925vh}");
-    }
+    },
   );
 
   test.each([0, -1, Number.NaN, Infinity])(
@@ -263,16 +263,16 @@ describe("Option edge cases", () => {
         transformCss(".test{width:10px}", {
           targetUnit: "rem",
           htmlFontSize,
-        })
+        }),
       ).resolves.toBe(".test{width:0.26667rem}");
-    }
+    },
   );
 
   test("zero ignoreThreshold converts 1px values", async () => {
     await expect(
       transformCss(".test{width:1px}", {
         ignoreThreshold: 0,
-      })
+      }),
     ).resolves.toBe(".test{width:0.26667vw}");
   });
 
@@ -280,14 +280,14 @@ describe("Option edge cases", () => {
     "unitPrecision %p falls back to default precision (5)",
     async (unitPrecision) => {
       await expect(
-        transformCss(".test{width:10px}", { unitPrecision })
+        transformCss(".test{width:10px}", { unitPrecision }),
       ).resolves.toBe(".test{width:2.66667vw}");
-    }
+    },
   );
 
   test("unitPrecision 0 rounds to an integer", async () => {
     await expect(
-      transformCss(".test{width:10px}", { unitPrecision: 0 })
+      transformCss(".test{width:10px}", { unitPrecision: 0 }),
     ).resolves.toBe(".test{width:3vw}");
   });
 
@@ -295,15 +295,15 @@ describe("Option edge cases", () => {
     "ignoreThreshold %p falls back to default and still converts",
     async (ignoreThreshold) => {
       await expect(
-        transformCss(".test{width:10px}", { ignoreThreshold })
+        transformCss(".test{width:10px}", { ignoreThreshold }),
       ).resolves.toBe(".test{width:2.66667vw}");
-    }
+    },
   );
 
   test("unsupported targetUnit leaves declarations unchanged and warns once", async () => {
     const result = await postcss([PxToUnit({ targetUnit: "px" })]).process(
       ".test{width:10px}",
-      { from: undefined }
+      { from: undefined },
     );
     expect(result.css).toBe(".test{width:10px}");
 

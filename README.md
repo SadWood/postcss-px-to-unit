@@ -70,19 +70,19 @@ PxToUnit({
 });
 ```
 
-| Option            | Default | Description                                                                |
-| ----------------- | :-----: | :------------------------------------------------------------------------- |
-| targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'vh', 'rem' and 'vw&rem'        |
-| ignoreThreshold   |    1    | px values less than or equal to this threshold won't be converted (compared by absolute value, so `-10px` is treated as `10px`) |
-| viewportWidth     |   375   | Base viewport width (for targetUnit: 'vw')                                 |
-| viewportHeight    |   667   | Base viewport height (for targetUnit: 'vh')                                |
-| htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                |
-| unitPrecision     |    5    | Unit value precision                                                       |
-| excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])           |
-| excludeSelectors  |   []    | Exclude CSS selectors, supports string and regexp. (example: ['.ignore'])  |
-| excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/]) |
+| Option            | Default | Description                                                                                                                            |
+| ----------------- | :-----: | :------------------------------------------------------------------------------------------------------------------------------------- |
+| targetUnit        |  'vw'   | Target relative length unit. Support 'vw', 'vh', 'rem' and 'vw&rem'                                                                    |
+| ignoreThreshold   |    1    | px values less than or equal to this threshold won't be converted (compared by absolute value, so `-10px` is treated as `10px`)        |
+| viewportWidth     |   375   | Base viewport width (for targetUnit: 'vw')                                                                                             |
+| viewportHeight    |   667   | Base viewport height (for targetUnit: 'vh')                                                                                            |
+| htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                                                                            |
+| unitPrecision     |    5    | Unit value precision                                                                                                                   |
+| excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])                                                                       |
+| excludeSelectors  |   []    | Exclude CSS selectors, supports string and regexp. (example: ['.ignore'])                                                              |
+| excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/])                                                             |
 | cacheSize         |   100   | Max number of cached conversion results (LRU). Use `Infinity` for an unbounded cache, or `0` / a non-positive value to disable caching |
-| debug             |  false  | Print debug logs of skipped/converted values                               |
+| debug             |  false  | Print debug logs of skipped/converted values                                                                                           |
 
 ### Behavior notes
 

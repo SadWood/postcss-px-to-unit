@@ -30,8 +30,8 @@ function createLRUCache(maxSize = 100) {
     maxSize === Infinity
       ? Infinity
       : Number.isFinite(maxSize) && maxSize > 0
-      ? Math.floor(maxSize)
-      : 0;
+        ? Math.floor(maxSize)
+        : 0;
   const cache = new Map();
   return {
     get(key) {
@@ -99,7 +99,10 @@ export default (options = {}) => {
   const normalizedViewportHeight = normalizePositiveNumber(viewportHeight, 667);
   const normalizedHtmlFontSize = normalizePositiveNumber(htmlFontSize, 37.5);
   const normalizedUnitPrecision = normalizeNonNegativeInteger(unitPrecision, 5);
-  const normalizedIgnoreThreshold = normalizeNonNegativeNumber(ignoreThreshold, 1);
+  const normalizedIgnoreThreshold = normalizeNonNegativeNumber(
+    ignoreThreshold,
+    1,
+  );
 
   const isTargetUnitSupported = SUPPORTED_TARGET_UNITS.includes(targetUnit);
 
@@ -107,19 +110,19 @@ export default (options = {}) => {
 
   const toRem = createConverter(
     (px, precision) => `${toFixed(px / normalizedHtmlFontSize, precision)}rem`,
-    cacheSize
+    cacheSize,
   );
 
   const toVw = createConverter(
     (px, precision) =>
       `${toFixed((px / normalizedViewportWidth) * 100, precision)}vw`,
-    cacheSize
+    cacheSize,
   );
 
   const toVh = createConverter(
     (px, precision) =>
       `${toFixed((px / normalizedViewportHeight) * 100, precision)}vh`,
-    cacheSize
+    cacheSize,
   );
 
   // 基于 postcss-value-parser 做 token 级转换：只转换真正的 px dimension（如
@@ -165,7 +168,7 @@ export default (options = {}) => {
         result.warn(
           `Unsupported targetUnit "${targetUnit}". Expected one of: ` +
             `${SUPPORTED_TARGET_UNITS.join(", ")}. No px conversion was applied.`,
-          { plugin: "postcss-px-to-unit" }
+          { plugin: "postcss-px-to-unit" },
         );
         return;
       }
@@ -203,7 +206,7 @@ export default (options = {}) => {
 
             if (debug) {
               log(
-                `[px-to-unit] 转换: "${originalValue}" -> "${rem.value}" / "${vw.value}"`
+                `[px-to-unit] 转换: "${originalValue}" -> "${rem.value}" / "${vw.value}"`,
               );
             }
             return;

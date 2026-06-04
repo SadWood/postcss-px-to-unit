@@ -5,7 +5,7 @@ import PxToUnit from "../index.js";
 const ruleCount = 5000;
 const css = Array.from(
   { length: ruleCount },
-  (_, index) => `.item-${index}{width:10px;height:20px;margin:${index % 8}px}`
+  (_, index) => `.item-${index}{width:10px;height:20px;margin:${index % 8}px}`,
 ).join("\n");
 
 async function run(targetUnit) {
