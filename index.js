@@ -143,9 +143,13 @@ export default (options = {}) => {
   // 基于 postcss-value-parser 做 token 级转换：只转换真正的 px dimension（如
   // 10px、-10px、3.75px），自动跳过字符串、url()、CSS 变量名（var(--size-10px)）
   // 等上下文，并保留 calc(100% - 10px) 这类正常转换。
-  const convertValue = (value, converter) => {
+  //
+  // 接收一个或多个 converter，对同一声明值只 parse 一次：先单次 walk 收集所有
+  // 待转 px 节点，再让每个 converter 复用同一 AST 依次输出。vw&rem 因此从两次
+  // parse 降为一次（其余单 converter 路径行为不变）。
+  const convertValueWith = (value, converters) => {
     const parsed = valueParser(value);
-    let changed = false;
+    const targets = [];
 
     parsed.walk((node) => {
       if (node.type !== "word") return;
@@ -164,11 +168,28 @@ export default (options = {}) => {
         return;
       }
 
-      node.value = converter(pixelValue, normalizedUnitPrecision);
-      changed = true;
+      targets.push({ node, pixelValue });
     });
 
-    return { changed, value: changed ? parsed.toString() : value };
+    if (targets.length === 0) {
+      return { changed: false, values: converters.map(() => value) };
+    }
+
+    // 每个 converter 先覆写全部目标节点再 toString；AST 被完整重写，converter
+    // 之间互不串味。
+    const values = converters.map((converter) => {
+      for (const { node, pixelValue } of targets) {
+        node.value = converter(pixelValue, normalizedUnitPrecision);
+      }
+      return parsed.toString();
+    });
+
+    return { changed: true, values };
+  };
+
+  const convertValue = (value, converter) => {
+    const { changed, values } = convertValueWith(value, [converter]);
+    return { changed, value: values[0] };
   };
 
   const isFileExcluded = (file) => isExcluded(file, excludeFiles);
@@ -212,16 +233,20 @@ export default (options = {}) => {
           if (!originalValue.includes("px")) return;
 
           if (targetUnit === "vw&rem") {
-            const rem = convertValue(originalValue, toRem);
-            if (!rem.changed) return;
+            // 单次 parse 同时产出 rem 与 vw，避免对同一声明值重复解析。
+            const { changed, values } = convertValueWith(originalValue, [
+              toRem,
+              toVw,
+            ]);
+            if (!changed) return;
 
-            const vw = convertValue(originalValue, toVw);
-            decl.value = rem.value;
-            decl.after({ prop: decl.prop, value: vw.value });
+            const [remValue, vwValue] = values;
+            decl.value = remValue;
+            decl.after({ prop: decl.prop, value: vwValue });
 
             if (debug) {
               log(
-                `[px-to-unit] 转换: "${originalValue}" -> "${rem.value}" / "${vw.value}"`,
+                `[px-to-unit] 转换: "${originalValue}" -> "${remValue}" / "${vwValue}"`,
               );
             }
             return;
