@@ -139,6 +139,7 @@ export default (options = {}) => {
       `${toFixed((px / normalizedViewportHeight) * 100, precision)}vh`,
     cacheSize,
   );
+  const valueCache = createLRUCache(cacheSize);
 
   // 基于 postcss-value-parser 做 token 级转换：只转换真正的 px dimension（如
   // 10px、-10px、3.75px），自动跳过字符串、url()、CSS 变量名（var(--size-10px)）
@@ -146,8 +147,12 @@ export default (options = {}) => {
   //
   // 接收一个或多个 converter，对同一声明值只 parse 一次：先单次 walk 收集所有
   // 待转 px 节点，再让每个 converter 复用同一 AST 依次输出。vw&rem 因此从两次
-  // parse 降为一次（其余单 converter 路径行为不变）。
-  const convertValueWith = (value, converters) => {
+  // parse 降为一次。转换结果按原始 value 缓存，重复声明可直接跳过 parse。
+  const convertValueWith = (value, converters, mode) => {
+    const cacheKey = `${mode}\0${value}`;
+    const cachedValue = valueCache.get(cacheKey);
+    if (cachedValue !== undefined) return cachedValue;
+
     const parsed = valueParser(value);
     const targets = [];
 
@@ -172,7 +177,12 @@ export default (options = {}) => {
     });
 
     if (targets.length === 0) {
-      return { changed: false, values: converters.map(() => value) };
+      const convertedValue = {
+        changed: false,
+        values: converters.map(() => value),
+      };
+      valueCache.set(cacheKey, convertedValue);
+      return convertedValue;
     }
 
     // 每个 converter 先覆写全部目标节点再 toString；AST 被完整重写，converter
@@ -184,11 +194,17 @@ export default (options = {}) => {
       return parsed.toString();
     });
 
-    return { changed: true, values };
+    const convertedValue = { changed: true, values };
+    valueCache.set(cacheKey, convertedValue);
+    return convertedValue;
   };
 
   const convertValue = (value, converter) => {
-    const { changed, values } = convertValueWith(value, [converter]);
+    const { changed, values } = convertValueWith(
+      value,
+      [converter],
+      targetUnit,
+    );
     return { changed, value: values[0] };
   };
 
@@ -234,10 +250,11 @@ export default (options = {}) => {
 
           if (targetUnit === "vw&rem") {
             // 单次 parse 同时产出 rem 与 vw，避免对同一声明值重复解析。
-            const { changed, values } = convertValueWith(originalValue, [
-              toRem,
-              toVw,
-            ]);
+            const { changed, values } = convertValueWith(
+              originalValue,
+              [toRem, toVw],
+              targetUnit,
+            );
             if (!changed) return;
 
             const [remValue, vwValue] = values;

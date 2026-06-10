@@ -266,6 +266,34 @@ describe("Option edge cases", () => {
     },
   );
 
+  test("repeated declaration values keep output stable when value cache is reused", async () => {
+    await expect(
+      transformCss(".a{margin:0 16px}.b{margin:0 16px}.c{padding:0 16px}"),
+    ).resolves.toBe(
+      ".a{margin:0 4.26667vw}.b{margin:0 4.26667vw}.c{padding:0 4.26667vw}",
+    );
+  });
+
+  test("value cache eviction keeps output stable", async () => {
+    await expect(
+      transformCss(".a{width:10px}.b{width:20px}.c{width:10px}", {
+        cacheSize: 1,
+      }),
+    ).resolves.toBe(
+      ".a{width:2.66667vw}.b{width:5.33333vw}.c{width:2.66667vw}",
+    );
+  });
+
+  test("vw&rem repeated declaration values keep both cached outputs stable", async () => {
+    await expect(
+      transformCss(".a{margin:0 16px}.b{margin:0 16px}", {
+        targetUnit: "vw&rem",
+      }),
+    ).resolves.toBe(
+      ".a{margin:0 0.42667rem;margin:0 4.26667vw}.b{margin:0 0.42667rem;margin:0 4.26667vw}",
+    );
+  });
+
   test.each([0, -1, Number.NaN, Infinity])(
     "viewportWidth %p falls back to the default value",
     async (viewportWidth) => {
