@@ -57,9 +57,6 @@ function createLRUCache(maxSize = 100) {
       }
       cache.set(key, value);
     },
-    has(key) {
-      return cache.has(key);
-    },
   };
 }
 

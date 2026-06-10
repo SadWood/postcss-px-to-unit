@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import postcss from "postcss";
-import PxToUnit from "../index";
+import PxToUnit from "../index.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function runCase(input, output, options) {
   let inputFile = fs.readFileSync(input);
