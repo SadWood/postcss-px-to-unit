@@ -210,6 +210,47 @@ export default (options = {}) => {
     isExcluded(selector, excludeSelectors);
   const isPropExcluded = (prop) => isExcluded(prop, excludeProperties);
 
+  const transformDeclaration = (decl) => {
+    if (isPropExcluded(decl.prop)) {
+      log(`[px-to-unit] 跳过属性: ${decl.prop}`);
+      return;
+    }
+
+    const originalValue = decl.value;
+    if (!originalValue.includes("px")) return;
+
+    if (targetUnit === "vw&rem") {
+      // 单次 parse 同时产出 rem 与 vw，避免对同一声明值重复解析。
+      const { changed, values } = convertValueWith(
+        originalValue,
+        [toRem, toVw],
+        targetUnit,
+      );
+      if (!changed) return;
+
+      const [remValue, vwValue] = values;
+      decl.value = remValue;
+      decl.cloneAfter({ value: vwValue });
+
+      if (debug) {
+        log(
+          `[px-to-unit] 转换: "${originalValue}" -> "${remValue}" / "${vwValue}"`,
+        );
+      }
+      return;
+    }
+
+    const converter =
+      targetUnit === "vh" ? toVh : targetUnit === "rem" ? toRem : toVw;
+    const { changed, value } = convertValue(originalValue, converter);
+    if (!changed) return;
+
+    decl.value = value;
+    if (debug) {
+      log(`[px-to-unit] 转换: "${originalValue}" -> "${value}"`);
+    }
+  };
+
   return {
     postcssPlugin: "postcss-px-to-unit",
     Once(root, { result }) {
@@ -237,44 +278,13 @@ export default (options = {}) => {
         }
 
         rule.walkDecls((decl) => {
-          if (isPropExcluded(decl.prop)) {
-            log(`[px-to-unit] 跳过属性: ${decl.prop}`);
-            return;
-          }
+          transformDeclaration(decl);
+        });
+      });
 
-          const originalValue = decl.value;
-          if (!originalValue.includes("px")) return;
-
-          if (targetUnit === "vw&rem") {
-            // 单次 parse 同时产出 rem 与 vw，避免对同一声明值重复解析。
-            const { changed, values } = convertValueWith(
-              originalValue,
-              [toRem, toVw],
-              targetUnit,
-            );
-            if (!changed) return;
-
-            const [remValue, vwValue] = values;
-            decl.value = remValue;
-            decl.cloneAfter({ value: vwValue });
-
-            if (debug) {
-              log(
-                `[px-to-unit] 转换: "${originalValue}" -> "${remValue}" / "${vwValue}"`,
-              );
-            }
-            return;
-          }
-
-          const converter =
-            targetUnit === "vh" ? toVh : targetUnit === "rem" ? toRem : toVw;
-          const { changed, value } = convertValue(originalValue, converter);
-          if (!changed) return;
-
-          decl.value = value;
-          if (debug) {
-            log(`[px-to-unit] 转换: "${originalValue}" -> "${value}"`);
-          }
+      root.walkAtRules((atrule) => {
+        atrule.each((node) => {
+          if (node.type === "decl") transformDeclaration(node);
         });
       });
     },

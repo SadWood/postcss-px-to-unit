@@ -161,6 +161,20 @@ describe("Convert", () => {
       ".a{animation-name:slide10px}",
     );
   });
+
+  test("direct declarations inside at-rules are converted", async () => {
+    await expect(
+      transformCss("@font-face{font-size:16px}@page{margin:20px}", {
+        targetUnit: "rem",
+      }),
+    ).resolves.toBe("@font-face{font-size:0.42667rem}@page{margin:0.53333rem}");
+  });
+
+  test("nested rule declarations inside at-rules are converted once", async () => {
+    await expect(
+      transformCss("@media (min-width: 1px){.a{width:10px}}"),
+    ).resolves.toBe("@media (min-width: 1px){.a{width:2.66667vw}}");
+  });
 });
 
 describe("Exclude rules", () => {
