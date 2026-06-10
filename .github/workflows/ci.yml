@@ -11,9 +11,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 覆盖 engines 声明的每个受支持的 Node 主版本下限。
-        node-version: [18, 20, 22, 24]
-    name: test (node ${{ matrix.node-version }})
+        # pnpm 11 要求 Node >= 22.13；Node 18/20 矩阵使用仍支持这些版本的 pnpm 9，
+        # 但全部都按提交的 pnpm-lock.yaml 做 frozen install，避免 CI 依赖漂移。
+        include:
+          - node-version: 18
+            pnpm-version: 9.15.9
+          - node-version: 20
+            pnpm-version: 9.15.9
+          - node-version: 22
+            pnpm-version: 11.5.0
+          - node-version: 24
+            pnpm-version: 11.5.0
+    name: test (node ${{ matrix.node-version }}, pnpm ${{ matrix.pnpm-version }})
     steps:
       - uses: actions/checkout@v4
 
@@ -25,11 +34,17 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Setup pnpm ${{ matrix.pnpm-version }}
+        run: |
+          corepack enable
+          corepack prepare pnpm@${{ matrix.pnpm-version }} --activate
+          pnpm --version
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Run type checks
-        run: npm run type-check
+        run: pnpm type-check
