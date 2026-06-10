@@ -282,7 +282,10 @@ export default (options = {}) => {
       log(`[px-to-unit] 处理文件: ${inputFile}`);
 
       root.walkRules((rule) => {
-        if (isSelectorExcluded(rule.selector)) {
+        if (
+          isSelectorExcluded(rule.selector) ||
+          hasExcludedRuleAncestor(rule)
+        ) {
           log(`[px-to-unit] 跳过选择器: ${rule.selector}`);
           return;
         }

@@ -277,6 +277,14 @@ describe("Exclude rules", () => {
       }),
     ).resolves.toBe(".skip{@media (min-width:1px){width:10px}}");
   });
+
+  test("exclude selector applies to nested rule declarations", async () => {
+    await expect(
+      transformCss(".skip{.child{width:10px}}", {
+        excludeSelectors: [".skip"],
+      }),
+    ).resolves.toBe(".skip{.child{width:10px}}");
+  });
 });
 
 describe("Option edge cases", () => {
