@@ -269,6 +269,14 @@ describe("Exclude rules", () => {
     expect(first.css).toBe(css);
     expect(second.css).toBe(css);
   });
+
+  test("exclude selector applies to nested at-rule direct declarations", async () => {
+    await expect(
+      transformCss(".skip{@media (min-width:1px){width:10px}}", {
+        excludeSelectors: [".skip"],
+      }),
+    ).resolves.toBe(".skip{@media (min-width:1px){width:10px}}");
+  });
 });
 
 describe("Option edge cases", () => {

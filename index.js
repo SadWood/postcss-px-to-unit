@@ -209,6 +209,16 @@ export default (options = {}) => {
   const isSelectorExcluded = (selector) =>
     isExcluded(selector, excludeSelectors);
   const isPropExcluded = (prop) => isExcluded(prop, excludeProperties);
+  const hasExcludedRuleAncestor = (node) => {
+    let parent = node.parent;
+    while (parent) {
+      if (parent.type === "rule" && isSelectorExcluded(parent.selector)) {
+        return true;
+      }
+      parent = parent.parent;
+    }
+    return false;
+  };
 
   const transformDeclaration = (decl) => {
     if (isPropExcluded(decl.prop)) {
@@ -284,7 +294,9 @@ export default (options = {}) => {
 
       root.walkAtRules((atrule) => {
         atrule.each((node) => {
-          if (node.type === "decl") transformDeclaration(node);
+          if (node.type !== "decl") return;
+          if (hasExcludedRuleAncestor(node)) return;
+          transformDeclaration(node);
         });
       });
     },
