@@ -26,8 +26,9 @@
     "dev": "node ./test/dev.js",
     "bench": "node ./scripts/benchmark.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js ./test --coverage",
+    "type-check": "tsc -p tsconfig.types.json",
     "verify:package": "node ./scripts/verify-package.js",
-    "prepublishOnly": "pnpm test && pnpm verify:package"
+    "prepublishOnly": "pnpm test && pnpm type-check && pnpm verify:package"
   },
   "files": [
     "index.js",
@@ -49,7 +50,8 @@
   "devDependencies": {
     "jest": "^30.4.2",
     "postcss": "^8.5.15",
-    "prettier": "3.8.3"
+    "prettier": "3.8.3",
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "postcss": "^8.4.7"
