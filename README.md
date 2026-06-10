@@ -79,7 +79,7 @@ PxToUnit({
 | htmlFontSize      |  37.5   | Base html font-size (for targetUnit: 'rem')                                                                                            |
 | unitPrecision     |    5    | Unit value precision                                                                                                                   |
 | excludeFiles      |   []    | Exclude file paths, supports regexp. (example: [/node_modules/])                                                                       |
-| excludeSelectors  |   []    | Exclude CSS selectors, supports string and regexp. (example: ['.ignore'])                                                              |
+| excludeSelectors  |   []    | Exclude CSS selectors and their nested subtree, supports string and regexp. (example: ['.ignore'])                                     |
 | excludeProperties |   []    | Exclude CSS properties, supports string and regexp. (example: [/^width$/])                                                             |
 | cacheSize         |   100   | Max number of cached conversion results (LRU). Use `Infinity` for an unbounded cache, or `0` / a non-positive value to disable caching |
 | debug             |  false  | Print debug logs of skipped/converted values                                                                                           |
@@ -88,6 +88,7 @@ PxToUnit({
 
 - **Token-level value parsing.** Values are parsed into tokens before conversion, so only real `px` dimensions are touched. `px` appearing inside strings, `url(...)`, or CSS variable names is left untouched — e.g. `width: var(--size-10px)` stays `var(--size-10px)`. Normal cases like `calc(100% - 10px)` are still converted.
 - **Invalid numeric options fall back to defaults.** `viewportWidth` / `viewportHeight` / `htmlFontSize` must be positive finite numbers (otherwise they fall back to `375` / `667` / `37.5`). `unitPrecision` must be a non-negative finite integer (otherwise `5`) and is clamped to a maximum of `20` to avoid floating-point overflow. `ignoreThreshold` must be a non-negative finite number (otherwise `1`).
+- **Excluded selectors skip nested CSS too.** When `excludeSelectors` matches a rule, declarations in its nested rule / at-rule subtree are left unchanged as well. For example, with `excludeSelectors: ['.skip']`, `.skip { .child { width: 10px } }` is not converted.
 - **Unsupported `targetUnit`.** Only `'vw'`, `'vh'`, `'rem'`, and `'vw&rem'` are supported. Any other value (including a wrong case like `'VW'`) emits a single PostCSS warning and performs no conversion.
 - **The `vw&rem` fallback combo only applies to `vw`/`rem`.** The `'vh'` mode emits a single `vh` declaration with no rem fallback.
 
