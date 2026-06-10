@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.5.2
+## 3.6.0
 
+- Added declaration value-level caching so repeated CSS values can skip repeated value parsing.
 - Fixed `excludeSelectors` behavior for CSS nesting: when a selector is excluded, declarations inside its nested rule and at-rule subtree are now skipped as well.
 - Fixed `vw&rem` fallback declarations to preserve PostCSS source and raw formatting metadata.
 - Converted direct declarations inside at-rules such as `@font-face` and `@page`.
