@@ -256,7 +256,7 @@ export default (options = {}) => {
 
             const [remValue, vwValue] = values;
             decl.value = remValue;
-            decl.after({ prop: decl.prop, value: vwValue });
+            decl.cloneAfter({ value: vwValue });
 
             if (debug) {
               log(

@@ -297,6 +297,36 @@ describe("Option edge cases", () => {
     );
   });
 
+  test("vw&rem cloned fallback declaration preserves source and raws", async () => {
+    const declarations = [];
+    const inspectDeclarations = {
+      postcssPlugin: "inspect-declarations",
+      Once(root) {
+        root.walkDecls("margin", (decl) => {
+          declarations.push({
+            value: decl.value,
+            source: decl.source,
+            raws: decl.raws,
+          });
+        });
+      },
+    };
+
+    const result = await postcss([
+      PxToUnit({ targetUnit: "vw&rem" }),
+      inspectDeclarations,
+    ]).process(".a {\n  margin: 16px;\n}", {
+      from: "/src/input.css",
+    });
+
+    expect(result.css).toBe(
+      ".a {\n  margin: 0.42667rem;\n  margin: 4.26667vw;\n}",
+    );
+    expect(declarations).toHaveLength(2);
+    expect(declarations[1].source).toEqual(declarations[0].source);
+    expect(declarations[1].raws).toEqual(declarations[0].raws);
+  });
+
   test.each([0, -1, Number.NaN, Infinity])(
     "viewportWidth %p falls back to the default value",
     async (viewportWidth) => {
